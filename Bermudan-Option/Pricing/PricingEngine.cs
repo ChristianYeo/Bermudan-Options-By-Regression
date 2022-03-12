@@ -46,22 +46,6 @@ namespace Bermudan_Option
 
             this.interestRate = interestRate;
         }
-        public PricingEngine(IDiffusionModel diffusionModel, Utilities.MyEnums.OptionType optionType, double strike, double interestRate)
-        {
-            if (optionType == Utilities.MyEnums.OptionType.call || optionType == Utilities.MyEnums.OptionType.put)
-            {
-                this.payoffBuilder = new PayoffSingleAsset(strike, optionType);
-            }
-
-            else
-            {
-                this.payoffBuilder = new PayoffMultiAsset(strike, optionType);
-            }
-
-            this.diffusionModel = diffusionModel;
-            this.continuationEngine = null;
-            this.interestRate = interestRate;
-        }
         public double BackwardPass(Vector<double> exerciceDates, int numberOfPaths)
         {
             // paths generation

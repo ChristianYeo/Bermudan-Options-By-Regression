@@ -19,7 +19,6 @@ namespace Bermudan_Option
             this.optionType = optionType;
         }
         public abstract Vector<double> ComputePayoffValues(Matrix<double> assetPrices);
-
     }
 
     public class PayoffSingleAsset : PayoffBuilder

@@ -47,7 +47,6 @@ namespace Bermudan_Option
             this.interestRate = interestRate;
             this.volatility = volatility;
             this.dividend = dividend;
-
             this.seed = seed;
             this.uniformGen = new MersenneTwister(seed);
         }
