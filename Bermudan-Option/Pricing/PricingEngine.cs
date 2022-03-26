@@ -14,6 +14,7 @@ namespace Bermudan_Option
         private readonly IDiffusionModel diffusionModel;
         private readonly IContinuationEngine continuationEngine;
         private readonly double interestRate;
+
         public PricingEngine(IDiffusionModel diffusionModel, Utilities.MyEnums.OptionType optionType, double strike, double interestRate,
             Utilities.MyEnums.RegressionMethods rm, int polynomeDegree, int dimension, int numberOfKnots = 0)
         {
@@ -46,11 +47,12 @@ namespace Bermudan_Option
 
             this.interestRate = interestRate;
         }
-        public double BackwardPass(Vector<double> exerciceDates, int numberOfPaths)
+
+        public double BackwardPass(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic = false)
         {
             // paths generation
             var indexLastExerciceDate = exerciceDates.Count - 1;
-            var states = diffusionModel.Diffusion(exerciceDates, numberOfPaths);
+            var states = diffusionModel.Diffusion(exerciceDates, numberOfPaths, useAntithetic);
 
             // final condition
             var thisExerciceDate = exerciceDates[indexLastExerciceDate];
@@ -66,22 +68,18 @@ namespace Bermudan_Option
                 var discountedPayoff = payoffBuilder.ComputePayoffValues(states[iExerciceDate]) * discountFactor;
                 var continuationValue = continuationEngine.ComputeContinuation(nextValues, states[iExerciceDate]);
 
-                for(var iPath = 0; iPath < numberOfPaths; iPath++)
+                for(var iPath = 0; iPath < states[0].RowCount; iPath++)
                 {
-                    var payoff = discountedPayoff[iPath];
-                    if (payoff >= continuationValue[iPath])
-                    {
-                        nextValues[iPath] = payoff;
-                    }
+                    nextValues[iPath] = Math.Max(discountedPayoff[iPath], continuationValue[iPath]);
                 }
             }
 
             return nextValues.Average();
         }
-        public double ForwardPass(Vector<double> exerciceDates, int numberOfPaths)
+        public double ForwardPass(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic = false)
         {
             // new paths generation
-            var states = diffusionModel.Diffusion(exerciceDates, numberOfPaths);
+            var states = diffusionModel.Diffusion(exerciceDates, numberOfPaths, useAntithetic);
             var numberOfExerciceDates = exerciceDates.Count;
             var optimalValues = Vector<double>.Build.Dense(numberOfPaths);
             var indexLastExerciceDate = exerciceDates.Count - 1;

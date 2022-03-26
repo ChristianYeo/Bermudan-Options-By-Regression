@@ -50,7 +50,7 @@ namespace Bermudan_Option
             this.seed = seed;
             this.uniformGen = new MersenneTwister(seed);
         }
-        public abstract Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths);
+        public abstract Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic);
     }
     public class BlackScholesOneDimensional : BSOneDimensional
     {
@@ -59,19 +59,21 @@ namespace Bermudan_Option
         {
 
         }
-        public override Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths)
+        public override Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic)
         {
             var numberOfExerciceDates = exerciceDates.Count;
             var prices = new Matrix<double>[numberOfExerciceDates + 1];
+            var antitheticCoeff = useAntithetic ? 2 : 1;
+            var actualNumberOfPaths = antitheticCoeff * numberOfPaths;
 
             for (var iExerciceDate = 0; iExerciceDate <= numberOfExerciceDates; ++iExerciceDate)
             {
-                prices[iExerciceDate] = Matrix<double>.Build.Dense(numberOfPaths, 1);
+                prices[iExerciceDate] = Matrix<double>.Build.Dense(actualNumberOfPaths, 1);
             }
 
-            for(var iPath = 0; iPath < numberOfPaths; ++iPath)
+            for(var iPath = 0; iPath < actualNumberOfPaths; ++iPath)
             {
-                prices[0][iPath, 0] = initialPrice;
+                prices[0].At(iPath, 0, initialPrice);
             }
 
             var startDate = 0.0;
@@ -83,10 +85,16 @@ namespace Bermudan_Option
                 var deltaTime = thisExerciceDate - startDate;
                 var driftPart = coeff * deltaTime;
                 var volPart = volatility * Math.Sqrt(deltaTime);
+                var gaussiansPlusOrNotAntithetic = Vector<double>.Build.Dense(antitheticCoeff * numberOfPaths);
                 var gaussians = Utilities.GenerateGaussians(uniformGen, numberOfPaths);
+                gaussiansPlusOrNotAntithetic.SetSubVector(0, numberOfPaths, gaussians);
 
-                prices[iExerciceDate + 1].SetColumn(0, prices[iExerciceDate].Column(0).PointwiseMultiply(
-                    (driftPart + volPart * gaussians).PointwiseExp()));
+                if(useAntithetic)
+                {
+                    gaussiansPlusOrNotAntithetic.SetSubVector(numberOfPaths, numberOfPaths, -gaussians);
+                }
+
+                prices[iExerciceDate + 1].SetColumn(0, prices[iExerciceDate].Column(0).PointwiseMultiply((driftPart + volPart * gaussiansPlusOrNotAntithetic).PointwiseExp()));
 
                 startDate = thisExerciceDate;
             }
@@ -128,6 +136,7 @@ namespace Bermudan_Option
                 UniformGenerator = value;
             }
         }
+
         public BSMultidimensional(Vector<double> initialPrices, double interestRate, Vector<double> volatilities, Vector<double> dividends,
             Matrix<double> correlationMatrix, int seed = 1234)
         {
@@ -136,7 +145,6 @@ namespace Bermudan_Option
             this.volatilities = volatilities;
             this.dividends = dividends;
             this.correlationMatrix = correlationMatrix;
-
             this.seed = seed;
             uniformGen = new MersenneTwister(seed);
 
@@ -144,7 +152,7 @@ namespace Bermudan_Option
                 Matrix<double>.Build.DenseOfDiagonalVector(this.volatilities).Multiply(this.correlationMatrix).Multiply(
                 Matrix<double>.Build.DenseOfDiagonalVector(this.volatilities)));
         }
-        public abstract Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths);
+        public abstract Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic);
     }
 
     public class BlackScholesMultidimensional : BSMultidimensional
@@ -154,18 +162,20 @@ namespace Bermudan_Option
         {
 
         }
-        public override Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths)
+        public override Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic)
         {
             var dim = initialPrices.Count;
             var numberOfExerciceDates = exerciceDates.Count;
             var prices = new Matrix<double>[numberOfExerciceDates];
+            var antitheticCoeff = useAntithetic ? 2 : 1;
+            var actualNumberOfPaths = antitheticCoeff * numberOfPaths;
 
             for (var iExerciceDate = 0; iExerciceDate < numberOfExerciceDates; ++iExerciceDate)
             {
-                prices[iExerciceDate] = Matrix<double>.Build.Dense(numberOfPaths, dim);
+                prices[iExerciceDate] = Matrix<double>.Build.Dense(actualNumberOfPaths, dim);
             }
 
-            var correlatedBM = Utilities.GenerateCorrelatedBM(choleskyMatrix, exerciceDates, uniformGen, numberOfPaths);
+            var correlatedBM = Utilities.GenerateCorrelatedBM(choleskyMatrix, exerciceDates, uniformGen, actualNumberOfPaths);
 
             for (var iExerciceDate = 0; iExerciceDate < numberOfExerciceDates; ++iExerciceDate)
             {
