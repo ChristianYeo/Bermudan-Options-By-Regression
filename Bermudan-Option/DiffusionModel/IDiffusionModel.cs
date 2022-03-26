@@ -15,6 +15,6 @@ namespace Bermudan_Option
         public int Seed { get; set; }
         public MersenneTwister UniformGenerator { get; set; }
 
-        public Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths);
+        public Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic);
     }
 }

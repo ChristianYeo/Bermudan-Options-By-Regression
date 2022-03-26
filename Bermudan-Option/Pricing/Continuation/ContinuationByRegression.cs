@@ -31,7 +31,6 @@ namespace Bermudan_Option
         {
             var regressors = ComputeRegressors(states);
             var regCoeff = LeastSquareRegression(nextValues, regressors);
-
             regressionCoefficients.Add(regCoeff);
 
             return regressors.Multiply(regCoeff);
