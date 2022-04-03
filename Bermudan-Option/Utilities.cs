@@ -54,38 +54,44 @@ namespace Bermudan_Option
 
             return gaussians;
         }
-        public static Matrix<double> ComputeMatrixSquareRoot(Matrix<double> inputMatrix)
+        public static Matrix<double> ComputeCholeskyDecomposition(Matrix<double> matrix)
         {
-            var size = inputMatrix.RowCount;
-            var diagVector = Vector<double>.Build.Dense(size);
-            var lMatrix = Matrix<double>.Build.Dense(size, size);
-            for (var j = 0; j < size; j++)
+            var size = matrix.RowCount;
+            var lower = Matrix<double>.Build.Dense(size, size);
+            for (var i = 0; i < size; i++)
             {
-                var diagValue = inputMatrix[j, j];
-                for (var k = 0; k < j; k++)
+                for (var j = 0; j <= i; j++)
                 {
-                    diagValue -= lMatrix[j, k] * lMatrix[j, k] * diagVector[k];
-                }
-                diagVector.At(j, diagValue);
-                lMatrix.At(j, j, 1.0);
-                for (var i = j + 1; i < size; ++i)
-                {
-                    var lValue = inputMatrix[i, j];
-                    for (var k = 0; k < j; k++)
+                    var sum = 0.0;
+                    if (j == i)
                     {
-                        lValue -= lMatrix[i, k] * lMatrix[j, k] * diagVector[k];
+                        for (var k = 0; k < j; k++)
+                        {
+                            sum += Math.Pow(lower[j, k], 2.0);
+                        }
+                        lower[j, j] = Math.Sqrt(matrix[j, j] - sum);
                     }
-                    lValue /= diagValue;
-                    lMatrix.At(i, j, lValue);
+
+                    else
+                    {
+                        for (var k = 0; k < j; k++)
+                        {
+                            sum += lower[i, k] * lower[j, k];
+                        }
+
+                        if(lower[j, j] == 0.0)
+                        {
+                            throw new Exception("Decomposition does not exists !");
+                        }
+
+                        lower[i, j] = (matrix[i, j] - sum) / lower[j, j];
+                    }
                 }
             }
-            var sqrtDiagMatrix = Matrix<double>.Build.Diagonal(diagVector.Select(x => x > 0.0 ? Math.Sqrt(x) : 0.0).ToArray());
-            var output = Matrix<double>.Build.Dense(size, size);
-            lMatrix.Multiply(sqrtDiagMatrix, output);
-            return output;
+
+            return lower;
         }
-        public static Matrix<double>[] GenerateCorrelatedBM(Matrix<double> choleskyMatrix, Vector<double> diffusionDates, MersenneTwister uniformGenerator, 
-            int numberOfPaths)
+        public static Matrix<double>[] GenerateCorrelatedBM(Matrix<double> choleskyMatrix, Vector<double> diffusionDates, MersenneTwister uniformGenerator, int numberOfPaths)
         {
             var numberOfDates = diffusionDates.Count;
             var dim = choleskyMatrix.RowCount;

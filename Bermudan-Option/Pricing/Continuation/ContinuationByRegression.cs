@@ -27,6 +27,8 @@ namespace Bermudan_Option
 
         public abstract Matrix<double> ComputeRegressors(Matrix<double> stateVariables);
 
+
+
         public Vector<double> ComputeContinuation(Vector<double> nextValues, Matrix<double> states)
         {
             var regressors = ComputeRegressors(states);
@@ -35,6 +37,7 @@ namespace Bermudan_Option
 
             return regressors.Multiply(regCoeff);
         }
+
         public Vector<double> LeastSquareRegression(Vector<double> values, Matrix<double> regressionbBasis)
         {
             return regressionbBasis.TransposeThisAndMultiply(regressionbBasis).QR().Solve(regressionbBasis.TransposeThisAndMultiply(values));
@@ -103,7 +106,6 @@ namespace Bermudan_Option
             {
                 var knot = listOfKnots[iKnot];
                 newBasisFunctions.Add(x => Math.Max(Math.Pow(x[0] - knot, degree), 0.0));
-
             }
 
             return newBasisFunctions.ToArray();

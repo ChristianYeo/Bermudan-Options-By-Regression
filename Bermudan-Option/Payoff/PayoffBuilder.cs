@@ -46,9 +46,7 @@ namespace Bermudan_Option
         }
         public override Vector<double> ComputePayoffValues(Matrix<double> assetPrices)
         {
-            var payoffs = Vector<double>.Build.DenseOfEnumerable(assetPrices.Column(0).Select(x => payoffFunction(x)));
-
-            return payoffs;
+            return Vector<double>.Build.DenseOfEnumerable(assetPrices.Column(0).Select(x => payoffFunction(x)));
         }
     }
 
@@ -85,9 +83,7 @@ namespace Bermudan_Option
         }
         public override Vector<double> ComputePayoffValues(Matrix<double> assetPrices)
         {
-            var payoffs = Vector<double>.Build.DenseOfEnumerable(assetPrices.EnumerateRows().Select(x => payoffFunction(x)));
-
-            return payoffs;
+            return Vector<double>.Build.DenseOfEnumerable(assetPrices.EnumerateRows().Select(x => payoffFunction(x)));
         }
     }
 }

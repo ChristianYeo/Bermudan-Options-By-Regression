@@ -52,6 +52,9 @@ namespace Bermudan_Option
         }
         public abstract Matrix<double>[] Diffusion(Vector<double> exerciceDates, int numberOfPaths, bool useAntithetic);
     }
+
+
+
     public class BlackScholesOneDimensional : BSOneDimensional
     {
         public BlackScholesOneDimensional(double initialPrice, double interestRate, double volatility, double dividend, int seed = 1234) :
@@ -71,11 +74,7 @@ namespace Bermudan_Option
                 prices[iExerciceDate] = Matrix<double>.Build.Dense(actualNumberOfPaths, 1);
             }
 
-            for(var iPath = 0; iPath < actualNumberOfPaths; ++iPath)
-            {
-                prices[0].At(iPath, 0, initialPrice);
-            }
-
+            prices[0].SetColumn(0, Vector<double>.Build.Dense(actualNumberOfPaths) + initialPrice);
             var startDate = 0.0;
             var coeff = interestRate - dividend - 0.5 * volatility * volatility;
 
@@ -95,7 +94,6 @@ namespace Bermudan_Option
                 }
 
                 prices[iExerciceDate + 1].SetColumn(0, prices[iExerciceDate].Column(0).PointwiseMultiply((driftPart + volPart * gaussiansPlusOrNotAntithetic).PointwiseExp()));
-
                 startDate = thisExerciceDate;
             }
 
@@ -148,7 +146,7 @@ namespace Bermudan_Option
             this.seed = seed;
             uniformGen = new MersenneTwister(seed);
 
-            this.choleskyMatrix = Utilities.ComputeMatrixSquareRoot(
+            this.choleskyMatrix = Utilities.ComputeCholeskyDecomposition(
                 Matrix<double>.Build.DenseOfDiagonalVector(this.volatilities).Multiply(this.correlationMatrix).Multiply(
                 Matrix<double>.Build.DenseOfDiagonalVector(this.volatilities)));
         }
@@ -170,18 +168,13 @@ namespace Bermudan_Option
             var antitheticCoeff = useAntithetic ? 2 : 1;
             var actualNumberOfPaths = antitheticCoeff * numberOfPaths;
 
-            for (var iExerciceDate = 0; iExerciceDate < numberOfExerciceDates; ++iExerciceDate)
-            {
-                prices[iExerciceDate] = Matrix<double>.Build.Dense(actualNumberOfPaths, dim);
-            }
-
             var correlatedBM = Utilities.GenerateCorrelatedBM(choleskyMatrix, exerciceDates, uniformGen, actualNumberOfPaths);
 
             for (var iExerciceDate = 0; iExerciceDate < numberOfExerciceDates; ++iExerciceDate)
             {
                 var thisExerciceDate = exerciceDates[iExerciceDate];
                 var driftPart = (interestRate - dividends - 0.5 * volatilities.PointwiseMultiply(volatilities)) * thisExerciceDate;
-
+                prices[iExerciceDate] = Matrix<double>.Build.Dense(actualNumberOfPaths, dim);
                 for (var iAsset = 0; iAsset < dim; ++iAsset)
                 {
                     prices[iExerciceDate].SetColumn(iAsset, initialPrices[iAsset] * (driftPart[iAsset] + 
